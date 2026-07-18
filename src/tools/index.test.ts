@@ -148,6 +148,9 @@ describe("Tool Handlers", () => {
       expect(result.content[0].text).toContain("**Sleep Stages:**");
       expect(result.content[0].text).toContain("Deep:");
       expect(result.content[0].text).toContain("REM:");
+      expect(result.content[0].text).toContain("**Sleep Phase Timeline (5-Min Intervals):**");
+      expect(result.content[0].text).toContain("Awake |");
+      expect(result.content[0].text).toContain("Time  |");
     });
 
     it("should use today as default date", async () => {

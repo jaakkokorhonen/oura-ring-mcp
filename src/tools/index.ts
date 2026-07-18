@@ -2809,7 +2809,71 @@ function formatSleepSession(session: SleepSession, dailyScore?: DailySleep): str
     lines.push(`\n**Sleep Latency:** ${formatDuration(session.latency)} to fall asleep`);
   }
 
+  // Include 5-minute interval sleep phase timeline (hypnogram) if available
+  if (session.sleep_phase_5_min && session.bedtime_start) {
+    lines.push(
+      "",
+      "**Sleep Phase Timeline (5-Min Intervals):**",
+      "```text",
+      generateHypnogramAscii(session.sleep_phase_5_min, session.bedtime_start),
+      "```"
+    );
+  }
+
   return lines.join("\n");
+}
+
+function incrementTime(timeStr: string, minutesToAdd: number): string {
+  const match = timeStr.match(/T(\d{2}):(\d{2})/);
+  if (!match) return "";
+  let hr = parseInt(match[1], 10);
+  let min = parseInt(match[2], 10);
+
+  min += minutesToAdd;
+  hr += Math.floor(min / 60);
+  min = min % 60;
+  hr = hr % 24;
+
+  const hrStr = String(hr).padStart(2, '0');
+  const minStr = String(min).padStart(2, '0');
+  return `${hrStr}:${minStr}`;
+}
+
+function generateHypnogramAscii(sleepPhaseStr: string, bedtimeStart: string): string {
+  const phases = Array.from(sleepPhaseStr);
+  const rows = {
+    awake: "Awake | ",
+    rem:   "REM   | ",
+    light: "Light | ",
+    deep:  "Deep  | ",
+  };
+
+  phases.forEach((char) => {
+    rows.awake += (char === '4') ? "█" : " ";
+    rows.rem   += (char === '3') ? "░" : " ";
+    rows.light += (char === '2') ? "▒" : " ";
+    rows.deep  += (char === '1') ? "▓" : " ";
+  });
+
+  // Calculate timeline ticks (every 1 hour)
+  let timeline = "Time  | ";
+  for (let i = 0; i < phases.length; i += 12) {
+    const timeStr = incrementTime(bedtimeStart, i * 5);
+    timeline += timeStr;
+    const remainingToNextTick = Math.min(12, phases.length - i) - timeStr.length;
+    if (remainingToNextTick > 0) {
+      timeline += " ".repeat(remainingToNextTick);
+    }
+  }
+
+  return [
+    rows.awake,
+    rows.rem,
+    rows.light,
+    rows.deep,
+    "-".repeat(rows.awake.length),
+    timeline,
+  ].join("\n");
 }
 
 function formatStress(day: DailyStress): string {
