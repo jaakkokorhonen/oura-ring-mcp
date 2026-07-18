@@ -12,7 +12,10 @@
  *   npx oura-ring-mcp logout   - Clear stored credentials
  *   npx oura-ring-mcp status   - Show authentication status
  */
-import "dotenv/config";
+import dotenv from "dotenv";
+// CRITICAL: quiet: true is required. Some dotenv wrappers (like dotenvx) log to stdout
+// on startup, which corrupts the stdio JSON-RPC stream and crashes the MCP client.
+dotenv.config({ quiet: true });
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
