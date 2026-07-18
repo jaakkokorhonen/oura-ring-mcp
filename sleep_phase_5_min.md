@@ -88,9 +88,59 @@ Time  | 23:30 00:30 01:30 02:30
 
 ---
 
-## 3. Implementation Checklist
+## 3. Data Storage Format (JSON)
+
+If the data is exported or stored locally (e.g. in `sleep_history.json`), the sleep phase timeline will be structured in one of the following formats inside the JSON objects:
+
+### Option A: Raw Sequence (Compact)
+Stores the raw digit string and the starting timestamp. The timestamp of each interval can be calculated programmatically by adding `index * 5` minutes to `bedtime_start`.
+```json
+{
+  "date": "2026-07-18",
+  "bedtime_start": "2026-07-17T19:35:00Z",
+  "sleep_phase_5_min_raw": "444423323441114"
+}
+```
+
+### Option B: Array of Stage Names (Recommended)
+An array of human-readable stage names mapped from the digits:
+- `1` -> `"deep"`
+- `2` -> `"light"`
+- `3` -> `"rem"`
+- `4` -> `"awake"`
+
+```json
+{
+  "date": "2026-07-18",
+  "sleep_phase_5_min": [
+    "awake", "awake", "awake", "awake", "light", 
+    "rem", "rem", "light", "rem", "awake", 
+    "awake", "deep", "deep", "deep", "awake"
+  ]
+}
+```
+
+### Option C: Explicit Timestamps (Detailed)
+An array of objects mapping each 5-minute interval explicitly to its timestamp and stage:
+```json
+{
+  "date": "2026-07-18",
+  "sleep_phase_5_min_detailed": [
+    {"time": "19:35", "stage": "awake"},
+    {"time": "19:40", "stage": "awake"},
+    {"time": "19:45", "stage": "awake"},
+    {"time": "19:50", "stage": "awake"},
+    {"time": "19:55", "stage": "light"}
+  ]
+}
+```
+
+---
+
+## 4. Implementation Checklist
 
 1. [ ] **Verify Types**: Ensure `sleep_phase_5_min` type matches generated schema types in `src/client.ts` and `src/types/oura-api.ts`.
 2. [ ] **Implement Formatter**: Write `generateHypnogramAscii` helper function in `src/tools/index.ts`.
 3. [ ] **Update formatSleepSession**: Call the helper function and append its output to the sleep session markdown.
 4. [ ] **Write Tests**: Add a test case in `src/tools/index.test.ts` to mock a sleep session containing `sleep_phase_5_min` and assert it is parsed and rendered correctly in the test response.
+
