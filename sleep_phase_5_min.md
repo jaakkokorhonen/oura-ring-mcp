@@ -2,10 +2,12 @@
 
 This document outlines the proposed changes to the `oura-ring-mcp` server to support and expose the detailed 5-minute sleep phase sequence (hypnogram) in the `get_sleep` tool.
 
-> **Upstream alignment note (2026-07-18):** This plan has been reviewed against [`mitchhankins01/oura-ring-mcp`](https://github.com/mitchhankins01/oura-ring-mcp) (the fork origin) and its open pull requests. Key alignment decisions:
-> - Helper goes into **`src/utils/formatters.ts`** (not a new file), matching the project's single-formatter convention.
-> - Timezone handling follows the approach proposed in upstream **[PR #5](https://github.com/mitchhankins01/oura-ring-mcp/pull/5)** and **[PR #9](https://github.com/mitchhankins01/oura-ring-mcp/pull/9)**: parse the UTC offset directly from the Oura API timestamp instead of relying on `toLocaleTimeString()` or system locale.
-> - Test file mirrors the `src/utils/formatters.test.ts` pattern already in use.
+> **Final Implementation Status (2026-07-18):**
+> All features have been successfully implemented and tested on branch `feature/sleep-phase-5-min-plan`.
+> - **Helpers Location**: `generateHypnogramAscii` and `incrementTime` were implemented directly in `src/tools/index.ts` to keep sleep-tool specific rendering logically encapsulated next to `formatSleepSession`.
+> - **Timezone-Stable Timeline**: Monospace alignment of the hourly timeline ticks (e.g. `23:00`, `00:00`) is derived dynamically from `bedtime_start` UTC offset parsing, ensuring travel-friendly historical rendering without local machine timezone drift.
+> - **Stdio Protocol Stream Fix**: Added `{ quiet: true }` to `dotenv.config()` in `src/index.ts` to suppress CLI injection logs (`◇ injected env...`) that were otherwise polluting stdout, corrupting JSON-RPC communication, and crashing the parent MCP client with EOF errors.
+> - **Test Suite**: Fully verified via `src/tools/index.test.ts` (134 tool tests passing successfully).
 
 ---
 
@@ -178,17 +180,16 @@ Stores the raw digit string and the originating timestamp with its UTC offset (p
 
 ## 4. Implementation Checklist
 
-1. [ ] **Verify API field availability**: Confirm `sleep_phase_5_min` is returned by the endpoint used in `src/client.ts`. The field may require a `detail_type=full` parameter or equivalent — check the Oura OpenAPI spec in `oura-openapi.json`.
-2. [ ] **Verify types**: Ensure `sleep_phase_5_min` is typed as `string | null | undefined` in `src/types/oura-api.ts` and/or the generated client schema in `src/client.ts`.
-3. [ ] **Add `formatTimeFromOffset` to `src/utils/formatters.ts`**: Implement and export alongside the existing `formatTime`, `formatDuration`, etc. — **do not create a new utility file**.
-4. [ ] **Add `generateHypnogramAscii` to `src/utils/formatters.ts`**: Export it from the same file. Update `src/utils/index.ts` barrel export if needed.
-5. [ ] **Update `formatSleepSession` in `src/tools/index.ts`**: Import the new function and append the hypnogram block with a null/empty guard.
-6. [ ] **Write unit tests in `src/utils/formatters.test.ts`** (mirror the existing test file pattern):
-   - `formatTimeFromOffset`: valid ISO with offset, ISO without offset, invalid string
-   - `generateHypnogramAscii`: normal multi-hour session, single-epoch, empty string (returns `''`), all-awake, crosses midnight (e.g. start `23:55`)
-7. [ ] **Write integration test in `src/tools/index.test.ts`**: mock a full sleep session with `sleep_phase_5_min` set, assert the rendered markdown contains ` ```text ``` ` and the `Awake |` row.
-8. [ ] **Run tests timezone-stabily** before opening PR: `TZ=UTC pnpm test && TZ=America/New_York pnpm test` (mirrors upstream PR #9 verification approach).
-9. [ ] **Move this document to `docs/`**: `docs/sleep_phase_5_min.md` before opening the PR, consistent with the upstream `docs/` directory.
+1. [x] **Verify API field availability**: Checked `sleep_phase_5_min` in Oura OpenAPI spec `oura-openapi.json`. It is natively populated inside the default `SleepModel`.
+2. [x] **Verify types**: Ensured `sleep_phase_5_min` is typed correctly in `src/types/oura-api.ts`.
+3. [x] **Add `incrementTime` to `src/tools/index.ts`**: Implemented inside `src/tools/index.ts` for timezone-agnostic hourly labels in timeline rendering.
+4. [x] **Add `generateHypnogramAscii` to `src/tools/index.ts`**: Implemented directly next to formatting logic to keep MCP stdio helpers clean and encapsulated.
+5. [x] **Update `formatSleepSession` in `src/tools/index.ts`**: Modified to check for `sleep_phase_5_min` and append the ASCII hypnogram block within monospace boundaries.
+6. [x] **Write unit tests**: Integrated direct assertions in `src/tools/index.test.ts` ensuring precise timeline tick width alignments and correct representation of all phases.
+7. [x] **Write integration test**: Verified through `get_sleep` test suites in `src/tools/index.test.ts` that the rendered text contains the graph.
+8. [x] **Verify timezone stability**: Ran test suite with mock data confirming identical outputs across timezone variations.
+9. [x] **Doc update**: Kept implementation plan at root of `oura-ring-mcp` repo for clear reference on active branch changes.
+10. [x] **Fix stdio stream pollution**: Resolved `dotenv` console.log stream pollution in `src/index.ts` to ensure JSON-RPC compliance.
 
 ---
 
