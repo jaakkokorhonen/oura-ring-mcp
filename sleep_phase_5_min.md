@@ -92,7 +92,7 @@ Time  | 23:30 00:30 01:30 02:30
 
 If the data is exported or stored locally (e.g. in `sleep_history.json`), the sleep phase timeline will be structured in one of the following formats inside the JSON objects:
 
-### Option A: Raw Sequence (Compact)
+### Option A: Raw Sequence (Selected)
 Stores the raw digit string and the starting timestamp. The timestamp of each interval can be calculated programmatically by adding `index * 5` minutes to `bedtime_start`.
 ```json
 {
@@ -102,7 +102,7 @@ Stores the raw digit string and the starting timestamp. The timestamp of each in
 }
 ```
 
-### Option B: Array of Stage Names (Recommended)
+### Option B: Array of Stage Names
 An array of human-readable stage names mapped from the digits:
 - `1` -> `"deep"`
 - `2` -> `"light"`
