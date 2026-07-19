@@ -263,6 +263,32 @@ curl -X POST http://localhost:3000/mcp \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"capabilities":{}},"id":1}'
 ```
 
+## Daily BigQuery Sync
+
+This repository contains a production-ready sync script (`update_bq.mjs`) that fetches incremental data from the Oura API and loads it directly into Google BigQuery.
+
+### Sync Architecture
+- **Incremental Fetches:** Automatically queries Oura data from the last 3 days to capture final updates or revisions to sleep, stress, and readiness scores.
+- **De-duplication:** Queries BigQuery for existing keys (`id` or `timestamp`) in the fetched range and loads only new, unique records.
+- **Data Sanitization:** Strips out `null` elements from repeated array fields (e.g. `heart_rate.items` or `hrv.items`) before importing to avoid BigQuery schema violations.
+- **Endpoint Safe-skips:** Skips unsupported endpoints (like `vo2_max` returning 404) gracefully without interrupting the sync.
+
+### Manual Run
+Run the script manually using `node`:
+```bash
+OURA_ACCESS_TOKEN="your_token_here" node update_bq.mjs
+```
+
+### Automation via macOS Cron
+The sync script is scheduled to run every morning at **08:57 AM** via macOS `crontab`.
+
+To view your active sync schedule:
+```bash
+crontab -l
+```
+
+Logs are automatically written to `sync.log` in the parent directory.
+
 ## Contributing
 
 See [CLAUDE.md](CLAUDE.md) for architecture details and development guidelines.
@@ -270,3 +296,4 @@ See [CLAUDE.md](CLAUDE.md) for architecture details and development guidelines.
 ## License
 
 MIT
+
