@@ -540,3 +540,20 @@ Important quirks to know when developing:
 - **Sleep attribution**: Sleep data is attributed to the day you woke up, not when you fell asleep.
 - **Data sync**: Data only syncs when user opens Oura app - "no data" often means ring hasn't synced yet.
 - **Rate limits**: 5000 requests per 5 minutes.
+
+## BigQuery Integration & Ingestion Guidelines
+
+When developing scripts (like `update_bq.mjs`) to load raw Oura API data into BigQuery tables:
+
+1. **BigQuery Repeated Field (Array) Null Constraint:**
+   BigQuery does not allow `null` values as elements within `REPEATED` (array) fields (e.g. `heart_rate.items` or `hrv.items`). Raw Oura JSON payloads often contain `null` elements in these arrays representing gaps in sensor readings.
+   - **Rule:** Before exporting JSON to NDJSON/loading to BigQuery, recursively sanitize all arrays to filter out `null` and `undefined` values. If a repeated field itself is null or missing, represent it as an empty array `[]` rather than `null`.
+   
+2. **Handling 404 Endpoint Failures:**
+   Not all endpoints (e.g., `vo2_max`) are available for all users, depending on hardware version, subscription status, or features enabled.
+   - **Rule:** Write sync runners to catch 404 errors on individual Oura API endpoints gracefully, log them, and continue processing other tables.
+
+3. **GCP CLI Sandboxing:**
+   Tools invoking the `bq` CLI require access to local gcloud credentials (`~/.config/gcloud/credentials.db`). When running in sandboxed IDE terminals, this will trigger operation permission errors.
+   - **Rule:** Always request explicit user approval/sandbox bypass when executing commands that hook into BigQuery or fetch local Google Cloud identity credentials.
+
